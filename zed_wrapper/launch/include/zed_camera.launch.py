@@ -72,6 +72,10 @@ def launch_setup(context, *args, **kwargs):
     zed_id = LaunchConfiguration('zed_id')
     serial_number = LaunchConfiguration('serial_number')
 
+    remote_mode = LaunchConfiguration('remote_mode')
+    remote_ip = LaunchConfiguration('remote_ip')
+    remote_port = LaunchConfiguration('remote_port')
+
     base_frame = LaunchConfiguration('base_frame')
     cam_pose = LaunchConfiguration('cam_pose')
 
@@ -142,6 +146,9 @@ def launch_setup(context, *args, **kwargs):
                 'pos_tracking.base_frame': base_frame,
                 'general.zed_id': zed_id,
                 'general.serial_number': serial_number,
+                'general.remote_mode': remote_mode,
+                'general.remote_ip': remote_ip,
+                'general.remote_port': remote_port,
                 'pos_tracking.publish_tf': publish_tf,
                 'pos_tracking.publish_map_tf': publish_map_tf,
                 'pos_tracking.publish_imu_tf': publish_tf
@@ -182,6 +189,18 @@ def generate_launch_description():
                 'serial_number',
                 default_value='0',
                 description='The serial number of the camera to be opened. To be used in multi-camera rigs. Has priority with respect to `zed_id`.'),
+            DeclareLaunchArgument(
+                'remote_mode',
+                default_value='false',
+                description='Enable remote mode. The camera will be opened using the IP address specified in `remote_ip` and `remote_port`.'),
+            DeclareLaunchArgument(
+                'remote_ip',
+                default_value='127.0.0.1',
+                description='The IP address of the remote camera'),
+            DeclareLaunchArgument(
+                'remote_port',
+                default_value='0',
+                description='The port number of the remote camera.'),            
             DeclareLaunchArgument(
                 'publish_urdf',
                 default_value='true',

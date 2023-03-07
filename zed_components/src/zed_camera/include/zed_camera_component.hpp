@@ -312,6 +312,9 @@ private:
   bool mDebugSensors = false;
   int mCamId = 0;
   int mCamSerialNumber = 0;
+  bool mRemoteMode = false;
+  std::string mRemoteIp = "";
+  unsigned short mRemotePort = 0;
   sl::MODEL mCamUserModel = sl::MODEL::ZED;  // Default camera model
   sl::MODEL mCamRealModel;                   // Camera model requested to SDK
   unsigned int mCamFwVersion;                // Camera FW version

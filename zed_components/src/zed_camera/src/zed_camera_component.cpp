@@ -482,6 +482,9 @@ void ZedCamera::getGeneralParams()
   getParam("general.camera_name", mCameraName, mCameraName, " * Camera name: ");
   getParam("general.zed_id", mCamId, mCamId, " * Camera ID: ");
   getParam("general.serial_number", mCamSerialNumber, mCamSerialNumber, " * Camera SN: ");
+  getParam("general.remote_mode", mRemoteMode, mRemoteMode, " * Remote Mode: ");
+  getParam("general.remote_ip", mRemoteIp, mRemoteIp, " * Remote IP: ");
+  getParam("general.remote_port", mRemotePort, mRemotePort, " * Remote Port: ");
   getParam(
     "general.camera_timeout_sec", mCamTimeoutSec, mCamTimeoutSec, " * Camera timeout [sec]: ");
   getParam(
@@ -2394,11 +2397,15 @@ bool ZedCamera::startCamera()
     mInitParams.camera_fps = mCamGrabFrameRate;
     mInitParams.camera_resolution = static_cast<sl::RESOLUTION>(mCamResol);
 
-    if (mCamSerialNumber == 0) {
-      mInitParams.input.setFromCameraID(mCamId);
+    if(mRemoteMode) {
+      mInitParams.input.setFromStream(sl::String(mRemoteIp.c_str()), mRemotePort);
     } else {
-      mInitParams.input.setFromSerialNumber(mCamSerialNumber);
-    }
+        if (mCamSerialNumber == 0) {
+            mInitParams.input.setFromCameraID(mCamId);
+        } else {
+            mInitParams.input.setFromSerialNumber(mCamSerialNumber);
+        }
+    }    
   }
 
   mInitParams.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;
@@ -2424,36 +2431,40 @@ bool ZedCamera::startCamera()
   mThreadStop = false;
 
   if (!mSvoMode) {
-    if (mCamSerialNumber == 0) {
-      mInitParams.input.setFromCameraID(mCamId);
+    if(mRemoteMode) {
+      mInitParams.input.setFromStream(sl::String(mRemoteIp.c_str()), mRemotePort);
     } else {
-      bool waiting_for_camera = true;
-
-      while (waiting_for_camera) {
-        // Ctrl+C check
-        if (!rclcpp::ok()) {
-          return false;
-        }
-
-        sl::DeviceProperties prop = sl_tools::getZEDFromSN(mCamSerialNumber);
-
-        if (prop.id < -1 || prop.camera_state == sl::CAMERA_STATE::NOT_AVAILABLE) {
-          std::string msg = "Camera with SN " + std::to_string(mCamSerialNumber) +
-            " not detected! Please verify the connection.";
-          RCLCPP_INFO(get_logger(), msg.c_str());
+        if (mCamSerialNumber == 0) {
+        mInitParams.input.setFromCameraID(mCamId);
         } else {
-          waiting_for_camera = false;
-          mInitParams.input.setFromCameraID(prop.id);
+        bool waiting_for_camera = true;
+
+        while (waiting_for_camera) {
+            // Ctrl+C check
+            if (!rclcpp::ok()) {
+            return false;
+            }
+
+            sl::DeviceProperties prop = sl_tools::getZEDFromSN(mCamSerialNumber);
+
+            if (prop.id < -1 || prop.camera_state == sl::CAMERA_STATE::NOT_AVAILABLE) {
+            std::string msg = "Camera with SN " + std::to_string(mCamSerialNumber) +
+                " not detected! Please verify the connection.";
+            RCLCPP_INFO(get_logger(), msg.c_str());
+            } else {
+            waiting_for_camera = false;
+            mInitParams.input.setFromCameraID(prop.id);
+            }
+
+            if (connectTimer.toc() >= mMaxReconnectTemp * mCamTimeoutSec) {
+            RCLCPP_ERROR(get_logger(), "Camera detection timeout");
+
+            return false;
+            }
+
+            rclcpp::sleep_for(std::chrono::seconds(mCamTimeoutSec));
         }
-
-        if (connectTimer.toc() >= mMaxReconnectTemp * mCamTimeoutSec) {
-          RCLCPP_ERROR(get_logger(), "Camera detection timeout");
-
-          return false;
         }
-
-        rclcpp::sleep_for(std::chrono::seconds(mCamTimeoutSec));
-      }
     }
   }
 
